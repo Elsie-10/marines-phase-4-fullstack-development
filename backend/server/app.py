@@ -25,15 +25,17 @@ app.config['JWT_COOKIE_CSRF_PROTECT'] = False  # or True with CSRF token
 jwt = JWTManager(app)
 
 
-CORS(app, resources={
+CORS(app,  resources={
     r"/*": {
         "origins": [
             "http://localhost:3001",
             "http://localhost:3000",
             "http://localhost:3005",
-        ]
+        ],
+        "supports_credentials": True     
     }
 }
+
 )
 migrate = Migrate(app, db)
 db.init_app(app)
@@ -127,15 +129,16 @@ class Login(Resource):
         email = data["email"]
 
         user = User.query.filter_by(email=email).first()
-        if user and bcrypt.checkpw(password.encode('utf-8'), user.password_hash):
-            access_token = create_access_token(identity=email) #gerate JWT
-            response = make_response(f"Welcome {user.username}")
-            # response.set_cookie("username", user.username, httponly=True, max_age=3600)
-            set_access_cookies(response, access_token) # save JWT in httponly cookies
-            return response        
-        return make_response(f"Invalid credentials!")
-api.add_resource(Login, '/login')
 
+        if user and bcrypt.checkpw(password.encode('utf-8'), user.password_hash):
+            access_token = create_access_token(identity=email)
+            response = make_response({"message": f"Welcome {user.username}"}, 200)
+            set_access_cookies(response, access_token)
+            return response
+
+        return make_response({"error": "Invalid credentials!"}, 401)
+
+api.add_resource(Login, '/login')
 class ReadCookie(Resource):
     def get(self):
         cookie_value = request.cookies.get("username")
